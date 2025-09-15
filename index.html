@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pwnagotchi Face Converter</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 119, 255, 0.2) 0%, transparent 50%),
+        linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+      color: #ffffff;
+      min-height: 100vh;
+      padding: 40px 20px;
+      backdrop-filter: blur(20px);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 50%,
+          rgba(255, 255, 255, 0.02) 100%);
+      backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4),
+        0 1px 0px rgba(255, 255, 255, 0.1) inset;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 40px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.1rem;
+      font-weight: 400;
+    }
+
+    .upload-area {
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 50px 20px;
+      text-align: center;
+      margin-bottom: 30px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.05) 0%,
+          rgba(255, 255, 255, 0.02) 100%);
+      position: relative;
+    }
+
+    .upload-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+      border-radius: 16px;
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .upload-area:hover {
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 100%);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .upload-area:hover::before {
+      opacity: 1;
+    }
+
+    .upload-area.dragover {
+      background: linear-gradient(145deg,
+          rgba(120, 119, 198, 0.2) 0%,
+          rgba(255, 119, 198, 0.1) 100%);
+      border-color: rgba(120, 119, 198, 0.8);
+      transform: scale(1.02);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .upload-text {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .upload-hint {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.95rem;
+    }
+
+    .progress-container {
+      display: none;
+      margin: 20px 0;
+      padding: 20px;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(255, 255, 255, 0.03) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #007AFF, #00C7FF);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .progress-text {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+      padding: 25px;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(255, 255, 255, 0.03) 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    label {
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      position: relative;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #ffffff, #e0e0e0);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+        0 1px 0 rgba(255, 255, 255, 0.2) inset;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #ffffff, #e0e0e0);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .slider-value {
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .crop-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-switch::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(145deg, #ffffff, #f0f0f0);
+      border-radius: 50%;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .toggle-switch.active {
+      background: linear-gradient(145deg, #007AFF, #0051D5);
+    }
+
+    .toggle-switch.active::before {
+      transform: translateX(22px);
+    }
+
+    .preview-section {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .preview-box {
+      text-align: center;
+      padding: 25px;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(255, 255, 255, 0.03) 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+    }
+
+    .preview-box h3 {
+      margin-bottom: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .image-container {
+      display: inline-block;
+      border-radius: 12px;
+      padding: 15px;
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.9) 0%,
+          rgba(240, 240, 240, 0.9) 100%);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .crop-container {
+      position: relative;
+      display: inline-block;
+      cursor: crosshair;
+    }
+
+    .crop-overlay {
+      position: absolute;
+      border: 2px solid #007AFF;
+      background: rgba(0, 122, 255, 0.1);
+      display: none;
+      pointer-events: none;
+      border-radius: 4px;
+    }
+
+    #originalImage,
+    #convertedImage {
+      border-radius: 8px;
+      display: block;
+    }
+
+    #originalImage {
+      max-width: 220px;
+      max-height: 220px;
+    }
+
+    #convertedImage {
+      width: 20vw;
+      height: 20vw;
+      image-rendering: pixelated;
+    }
+
+    #convertedImage {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+
+    .download-btn {
+      background: linear-gradient(145deg, #007AFF 0%, #0051D5 100%);
+      color: #ffffff;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-transform: none;
+      letter-spacing: 0;
+      box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3),
+        0 1px 0 rgba(255, 255, 255, 0.1) inset;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0, 122, 255, 0.4),
+        0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    .download-btn:disabled {
+      background: linear-gradient(145deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 100%);
+      color: rgba(255, 255, 255, 0.3);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .info {
+      background: linear-gradient(145deg,
+          rgba(0, 122, 255, 0.1) 0%,
+          rgba(0, 122, 255, 0.05) 100%);
+      border-left: 4px solid #007AFF;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 0 12px 12px 0;
+      border: 1px solid rgba(0, 122, 255, 0.2);
+    }
+
+    .specs {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.9rem;
+      margin-top: 10px;
+      font-weight: 400;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .face-preview {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+    }
+
+    .processing-mode {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(145deg, #007AFF, #0051D5);
+      color: #ffffff;
+      border-color: #007AFF;
+      transform: translateY(-1px);
+    }
+
+    .mode-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 25px;
+        margin: 20px 10px;
+      }
+
+      h1 {
+        font-size: 2.2rem;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .preview-section {
+        grid-template-columns: 1fr;
+      }
+
+      #originalImage,
+      #convertedImage {
+        max-width: 280px;
+        max-height: 280px;
+      }
+
+      #convertedImage {
+        transform: scale(3);
+        margin: 45px;
+      }
+
+      .upload-area {
+        padding: 40px 15px;
+      }
+
+      .crop-container {
+        cursor: pointer;
+      }
+
+      .toggle-switch {
+        transform: scale(1.2);
+      }
+
+      .processing-mode {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="face-preview">(⌐■_■)</div>
+    <h1>Pwnagotchi Face Converter</h1>
+    <p class="subtitle">Convert any image to Pwnagotchi face format (72x72 PNG, enhanced grayscale detail)</p>
+
+    <div class="processing-mode">
+      <button class="mode-btn active" data-mode="detailed">Detailed Grayscale</button>
+      <button class="mode-btn" data-mode="adaptive">Adaptive Enhancement</button>
+      <button class="mode-btn" data-mode="classic">Classic B&W</button>
+    </div>
+
+    <div class="crop-toggle">
+      <label>Enable Crop</label>
+      <div class="toggle-switch" id="cropToggle"></div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="contrastSlider">Contrast</label>
+        <input type="range" id="contrastSlider" min="0.5" max="3" step="0.1" value="1.2">
+        <span class="slider-value" id="contrastValue">1.2</span>
+      </div>
+      <div class="control-group">
+        <label for="brightnessSlider">Brightness</label>
+        <input type="range" id="brightnessSlider" min="-50" max="50" step="1" value="5">
+        <span class="slider-value" id="brightnessValue">5</span>
+      </div>
+      <div class="control-group">
+        <label for="sharpnessSlider">Sharpness</label>
+        <input type="range" id="sharpnessSlider" min="0" max="2" step="0.1" value="0.8">
+        <span class="slider-value" id="sharpnessValue">0.8</span>
+      </div>
+      <div class="control-group">
+        <label for="detailSlider">Detail Level</label>
+        <input type="range" id="detailSlider" min="0" max="1" step="0.1" value="0.6">
+        <span class="slider-value" id="detailValue">0.6</span>
+      </div>
+    </div>
+
+    <div class="preview-section" id="previewSection">
+      <div class="preview-box">
+        <h3>Original</h3>
+        <div class="image-container">
+          <div class="crop-container" id="cropContainer">
+            <img id="originalImage" alt="Original image">
+            <div class="crop-overlay" id="cropOverlay"></div>
+          </div>
+        </div>
+        <div class="specs" id="originalSpecs"></div>
+      </div>
+
+      <div class="preview-box">
+        <h3>Converted (72x72)</h3>
+        <div class="image-container">
+          <img id="convertedImage" alt="Converted image">
+        </div>
+        <div class="specs">72x72 pixels, enhanced grayscale PNG</div>
+      </div>
+    </div>
+
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-text">Click to upload or drag & drop an image</div>
+      <div class="upload-hint">Supports JPG, PNG, GIF, BMP, WebP</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-text" id="progressText">Processing...</div>
+    </div>
+
+    <div class="button-group">
+      <button class="download-btn" id="downloadBtn" disabled>
+        Download Pwnagotchi Face
+      </button>
+    </div>
+
+    <canvas id="canvas" width="72" height="72"></canvas>
+    <canvas id="tempCanvas" width="144" height="144" style="display: none;"></canvas>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const originalImage = document.getElementById('originalImage');
+    const convertedImage = document.getElementById('convertedImage');
+    const previewSection = document.getElementById('previewSection');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const canvas = document.getElementById('canvas');
+    const tempCanvas = document.getElementById('tempCanvas');
+    const ctx = canvas.getContext('2d');
+    const tempCtx = tempCanvas.getContext('2d');
+    const originalSpecs = document.getElementById('originalSpecs');
+    const cropToggle = document.getElementById('cropToggle');
+    const cropContainer = document.getElementById('cropContainer');
+    const cropOverlay = document.getElementById('cropOverlay');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    const contrastSlider = document.getElementById('contrastSlider');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const sharpnessSlider = document.getElementById('sharpnessSlider');
+    const detailSlider = document.getElementById('detailSlider');
+    const contrastValue = document.getElementById('contrastValue');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const sharpnessValue = document.getElementById('sharpnessValue');
+    const detailValue = document.getElementById('detailValue');
+
+    const modeButtons = document.querySelectorAll('.mode-btn');
+
+    let currentImageFile = null;
+    let cropEnabled = false;
+    let cropData = { x: 0, y: 0, width: 0, height: 0 };
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let imageScale = { x: 1, y: 1 };
+    let processingMode = 'detailed';
+
+    // Progress bar functions
+    function showProgress(text = 'Processing...') {
+      progressContainer.style.display = 'block';
+      progressText.textContent = text;
+      progressFill.style.width = '0%';
+    }
+
+    function updateProgress(percent) {
+      progressFill.style.width = percent + '%';
+    }
+
+    function hideProgress() {
+      setTimeout(() => {
+        progressContainer.style.display = 'none';
+      }, 500);
+    }
+
+    // Mode selection
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        processingMode = btn.dataset.mode;
+        if (currentImageFile) {
+          processImage();
+        }
+      });
+    });
+
+    // Upload area interactions
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // Crop toggle
+    cropToggle.addEventListener('click', () => {
+      cropEnabled = !cropEnabled;
+      cropToggle.classList.toggle('active', cropEnabled);
+      cropContainer.style.cursor = cropEnabled ? 'crosshair' : 'default';
+
+      if (!cropEnabled) {
+        cropOverlay.style.display = 'none';
+        cropData = { x: 0, y: 0, width: 0, height: 0 };
+        if (currentImageFile) processImage();
+      }
+    });
+
+    // Enhanced crop functionality
+    function getEventPos(e, rect) {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function startCrop(e) {
+      if (!cropEnabled) return;
+      e.preventDefault();
+
+      const rect = originalImage.getBoundingClientRect();
+      const pos = getEventPos(e, rect);
+      startX = pos.x;
+      startY = pos.y;
+      isDragging = true;
+
+      cropData.x = startX;
+      cropData.y = startY;
+      cropData.width = 0;
+      cropData.height = 0;
+
+      cropOverlay.style.left = startX + 'px';
+      cropOverlay.style.top = startY + 'px';
+      cropOverlay.style.width = '0px';
+      cropOverlay.style.height = '0px';
+      cropOverlay.style.display = 'block';
+
+      document.addEventListener('mousemove', updateCrop, { passive: false });
+      document.addEventListener('mouseup', endCrop);
+      document.addEventListener('touchmove', updateCrop, { passive: false });
+      document.addEventListener('touchend', endCrop);
+    }
+
+    function updateCrop(e) {
+      if (!isDragging || !cropEnabled) return;
+      e.preventDefault();
+
+      const rect = originalImage.getBoundingClientRect();
+      const pos = getEventPos(e, rect);
+
+      const maxX = originalImage.clientWidth;
+      const maxY = originalImage.clientHeight;
+      const currentX = Math.max(0, Math.min(maxX, pos.x));
+      const currentY = Math.max(0, Math.min(maxY, pos.y));
+
+      const width = Math.abs(currentX - startX);
+      const height = Math.abs(currentY - startY);
+      const x = Math.min(currentX, startX);
+      const y = Math.min(currentY, startY);
+
+      const size = Math.min(width, height);
+
+      cropData.x = x;
+      cropData.y = y;
+      cropData.width = size;
+      cropData.height = size;
+
+      cropOverlay.style.left = x + 'px';
+      cropOverlay.style.top = y + 'px';
+      cropOverlay.style.width = size + 'px';
+      cropOverlay.style.height = size + 'px';
+    }
+
+    function endCrop(e) {
+      if (!isDragging) return;
+      isDragging = false;
+
+      document.removeEventListener('mousemove', updateCrop);
+      document.removeEventListener('mouseup', endCrop);
+      document.removeEventListener('touchmove', updateCrop);
+      document.removeEventListener('touchend', endCrop);
+
+      if (cropData.width > 10 && cropData.height > 10) {
+        imageScale.x = originalImage.naturalWidth / originalImage.clientWidth;
+        imageScale.y = originalImage.naturalHeight / originalImage.clientHeight;
+        processImage();
+      } else {
+        cropOverlay.style.display = 'none';
+        cropData = { x: 0, y: 0, width: 0, height: 0 };
+      }
+    }
+
+    cropContainer.addEventListener('mousedown', startCrop);
+    cropContainer.addEventListener('touchstart', startCrop, { passive: false });
+
+    cropContainer.addEventListener('selectstart', (e) => {
+      if (cropEnabled) e.preventDefault();
+    });
+
+    // Slider updates with debouncing
+    let processingTimeout;
+
+    const updateSlider = (slider, valueSpan) => {
+      valueSpan.textContent = slider.value;
+      if (currentImageFile) {
+        clearTimeout(processingTimeout);
+        processingTimeout = setTimeout(() => {
+          requestAnimationFrame(processImage);
+        }, 100);
+      }
+    };
+
+    contrastSlider.addEventListener('input', () => updateSlider(contrastSlider, contrastValue));
+    brightnessSlider.addEventListener('input', () => updateSlider(brightnessSlider, brightnessValue));
+    sharpnessSlider.addEventListener('input', () => updateSlider(sharpnessSlider, sharpnessValue));
+    detailSlider.addEventListener('input', () => updateSlider(detailSlider, detailValue));
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file.');
+        return;
+      }
+
+      showProgress('Loading image...');
+      updateProgress(20);
+
+      currentImageFile = file;
+
+      const reader = new FileReader();
+
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const progress = 20 + (e.loaded / e.total) * 50;
+          updateProgress(progress);
+        }
+      };
+
+      reader.onload = (e) => {
+        updateProgress(80);
+        originalImage.src = e.target.result;
+        originalImage.onload = () => {
+          updateProgress(90);
+          const { naturalWidth, naturalHeight } = originalImage;
+          originalSpecs.textContent = `${naturalWidth}x${naturalHeight} pixels`;
+
+          cropOverlay.style.display = 'none';
+          cropData = { x: 0, y: 0, width: 0, height: 0 };
+
+          imageScale.x = originalImage.naturalWidth / originalImage.clientWidth;
+          imageScale.y = originalImage.naturalHeight / originalImage.clientHeight;
+
+          updateProgress(100);
+          setTimeout(() => {
+            processImage();
+            previewSection.style.display = 'grid';
+            hideProgress();
+          }, 200);
+        };
+
+        originalImage.onerror = () => {
+          hideProgress();
+          alert('Error loading image. Please try a different file.');
+        };
+      };
+
+      reader.onerror = () => {
+        hideProgress();
+        alert('Error reading file. Please try again.');
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    // Enhanced image processing algorithms
+    function applyUnsharpMask(data, width, height, amount) {
+      const blurred = new Uint8ClampedArray(data.length);
+      const kernel = [1, 2, 1, 2, 4, 2, 1, 2, 1];
+      const kernelSum = 16;
+
+      // Apply Gaussian blur
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              const idx = ((y + ky) * width + (x + kx)) * 4;
+              sum += data[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
+            }
+          }
+          const idx = (y * width + x) * 4;
+          blurred[idx] = sum / kernelSum;
+        }
+      }
+
+      // Apply unsharp mask
+      for (let i = 0; i < data.length; i += 4) {
+        const original = data[i];
+        const blur = blurred[i];
+        const sharpened = original + amount * (original - blur);
+        data[i] = data[i + 1] = data[i + 2] = Math.max(0, Math.min(255, sharpened));
+      }
+    }
+
+    function enhanceLocalContrast(data, width, height, strength) {
+      const enhanced = new Uint8ClampedArray(data.length);
+      const radius = 3;
+
+      for (let y = radius; y < height - radius; y++) {
+        for (let x = radius; x < width - radius; x++) {
+          let sum = 0;
+          let count = 0;
+          let min = 255;
+          let max = 0;
+
+          // Calculate local statistics
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+              const idx = ((y + dy) * width + (x + dx)) * 4;
+              const value = data[idx];
+              sum += value;
+              count++;
+              min = Math.min(min, value);
+              max = Math.max(max, value);
+            }
+          }
+
+          const mean = sum / count;
+          const localRange = max - min;
+          const centerIdx = (y * width + x) * 4;
+          const centerValue = data[centerIdx];
+
+          if (localRange > 10) {
+            const deviation = centerValue - mean;
+            const enhancement = deviation * strength * (localRange / 255);
+            const result = centerValue + enhancement;
+            enhanced[centerIdx] = Math.max(0, Math.min(255, result));
+          } else {
+            enhanced[centerIdx] = centerValue;
+          }
+        }
+      }
+
+      // Copy enhanced values back
+      for (let i = 0; i < data.length; i += 4) {
+        if (enhanced[i] !== undefined) {
+          data[i] = data[i + 1] = data[i + 2] = enhanced[i];
+        }
+      }
+    }
+
+    function adaptiveHistogramEqualization(data, width, height) {
+      const tileSize = 16;
+      const tilesX = Math.ceil(width / tileSize);
+      const tilesY = Math.ceil(height / tileSize);
+
+      for (let ty = 0; ty < tilesY; ty++) {
+        for (let tx = 0; tx < tilesX; tx++) {
+          const startX = tx * tileSize;
+          const startY = ty * tileSize;
+          const endX = Math.min(startX + tileSize, width);
+          const endY = Math.min(startY + tileSize, height);
+
+          // Build histogram for this tile
+          const histogram = new Array(256).fill(0);
+          let pixelCount = 0;
+
+          for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+              const idx = (y * width + x) * 4;
+              histogram[data[idx]]++;
+              pixelCount++;
+            }
+          }
+
+          // Build cumulative distribution
+          const cdf = new Array(256);
+          cdf[0] = histogram[0];
+          for (let i = 1; i < 256; i++) {
+            cdf[i] = cdf[i - 1] + histogram[i];
+          }
+
+          // Apply equalization to tile
+          for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+              const idx = (y * width + x) * 4;
+              const oldValue = data[idx];
+              const newValue = Math.round((cdf[oldValue] / pixelCount) * 255);
+              data[idx] = data[idx + 1] = data[idx + 2] = newValue;
+            }
+          }
+        }
+      }
+    }
+
+    function processImage() {
+      if (!originalImage.src) return;
+
+      showProgress('Processing image...');
+      updateProgress(0);
+
+      requestAnimationFrame(() => {
+        // First, draw to temp canvas at 2x resolution for better quality
+        tempCtx.clearRect(0, 0, 144, 144);
+        ctx.clearRect(0, 0, 72, 72);
+
+        let sourceX = 0, sourceY = 0, sourceWidth = originalImage.naturalWidth, sourceHeight = originalImage.naturalHeight;
+
+        if (cropEnabled && cropData.width > 0 && cropData.height > 0) {
+          sourceX = cropData.x * imageScale.x;
+          sourceY = cropData.y * imageScale.y;
+          sourceWidth = cropData.width * imageScale.x;
+          sourceHeight = cropData.height * imageScale.y;
+        }
+
+        updateProgress(20);
+
+        // Draw to temp canvas at higher resolution
+        tempCtx.drawImage(originalImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 144, 144);
+
+        updateProgress(40);
+
+        // Get image data for processing
+        const tempImageData = tempCtx.getImageData(0, 0, 144, 144);
+        const tempData = tempImageData.data;
+
+        const contrast = parseFloat(contrastSlider.value);
+        const brightness = parseInt(brightnessSlider.value);
+        const sharpness = parseFloat(sharpnessSlider.value);
+        const detailLevel = parseFloat(detailSlider.value);
+
+        // Convert to grayscale with enhanced luminance calculation
+        for (let i = 0; i < tempData.length; i += 4) {
+          // Use improved grayscale conversion that preserves more detail
+          const r = tempData[i];
+          const g = tempData[i + 1];
+          const b = tempData[i + 2];
+
+          let gray;
+          if (processingMode === 'detailed') {
+            // Preserve more detail in shadows and highlights
+            gray = (r * 0.299 + g * 0.587 + b * 0.114);
+            const variance = Math.abs(r - gray) + Math.abs(g - gray) + Math.abs(b - gray);
+            gray += variance * 0.1; // Add detail from color variance
+          } else if (processingMode === 'adaptive') {
+            // Adaptive weighting based on local contrast
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const range = max - min;
+            if (range > 30) {
+              gray = r * 0.2126 + g * 0.7152 + b * 0.0722; // sRGB weights
+            } else {
+              gray = (r + g + b) / 3; // Simple average for low contrast areas
+            }
+          } else {
+            // Classic conversion
+            gray = r * 0.299 + g * 0.587 + b * 0.114;
+          }
+
+          tempData[i] = tempData[i + 1] = tempData[i + 2] = Math.max(0, Math.min(255, gray));
+        }
+
+        updateProgress(60);
+
+        // Apply brightness
+        for (let i = 0; i < tempData.length; i += 4) {
+          let gray = tempData[i] + brightness;
+          gray = Math.max(0, Math.min(255, gray));
+          tempData[i] = tempData[i + 1] = tempData[i + 2] = gray;
+        }
+
+        // Apply contrast with improved algorithm
+        const contrastFactor = (259 * (contrast * 100 + 255)) / (255 * (259 - contrast * 100));
+        for (let i = 0; i < tempData.length; i += 4) {
+          let gray = contrastFactor * (tempData[i] - 128) + 128;
+          gray = Math.max(0, Math.min(255, gray));
+          tempData[i] = tempData[i + 1] = tempData[i + 2] = gray;
+        }
+
+        updateProgress(75);
+
+        // Apply processing mode specific enhancements
+        if (processingMode === 'detailed' && detailLevel > 0) {
+          enhanceLocalContrast(tempData, 144, 144, detailLevel);
+        } else if (processingMode === 'adaptive') {
+          adaptiveHistogramEqualization(tempData, 144, 144);
+        }
+
+        // Apply sharpening
+        if (sharpness > 0) {
+          applyUnsharpMask(tempData, 144, 144, sharpness);
+        }
+
+        updateProgress(90);
+
+        // Put processed data back to temp canvas
+        tempCtx.putImageData(tempImageData, 0, 0);
+
+        // Now downsample to 72x72 with better quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(tempCanvas, 0, 0, 144, 144, 0, 0, 72, 72);
+
+        // Final processing for optimal Pwnagotchi display
+        const finalImageData = ctx.getImageData(0, 0, 72, 72);
+        const finalData = finalImageData.data;
+
+        if (processingMode === 'classic') {
+          // Apply classic black and white threshold
+          const threshold = 128;
+          for (let i = 0; i < finalData.length; i += 4) {
+            const gray = finalData[i];
+            const bw = gray > threshold ? 255 : 0;
+            finalData[i] = finalData[i + 1] = finalData[i + 2] = bw;
+          }
+        } else {
+          // Optimize grayscale levels for better display on Pwnagotchi
+          for (let i = 0; i < finalData.length; i += 4) {
+            let gray = finalData[i];
+
+            // Map to optimal grayscale levels for Pwnagotchi display
+            if (gray < 32) gray = 0;
+            else if (gray < 96) gray = 64;
+            else if (gray < 160) gray = 128;
+            else if (gray < 224) gray = 192;
+            else gray = 255;
+
+            finalData[i] = finalData[i + 1] = finalData[i + 2] = gray;
+          }
+        }
+
+        ctx.putImageData(finalImageData, 0, 0);
+        convertedImage.src = canvas.toDataURL('image/png');
+        downloadBtn.disabled = false;
+
+        updateProgress(100);
+        hideProgress();
+      });
+    }
+
+    downloadBtn.addEventListener('click', () => {
+      if (!convertedImage.src) return;
+
+      showProgress('Preparing download...');
+      updateProgress(50);
+
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.download = 'pwnagotchi-face-72x72.png';
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        updateProgress(100);
+        hideProgress();
+      }, 100);
+    });
+  </script>
+</body>
+
+</html>
